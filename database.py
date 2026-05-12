@@ -33,9 +33,13 @@ class Database:
             ''')
             self.conn.commit()
         
-        # Initialize default referral reward to $1.0 if not exists
+        # Initialize default settings
         if not self.get_setting('referral_reward'):
             self.set_setting('referral_reward', '1.0')
+        if not self.get_setting('chatgpt_price'):
+            self.set_setting('chatgpt_price', '1.0')
+        if not self.get_setting('success_group_id'):
+            self.set_setting('success_group_id', '-1003721268860')
 
     def user_exists(self, user_id):
         with self.lock:
