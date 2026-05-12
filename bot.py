@@ -157,11 +157,16 @@ def process_payment_link(message):
     )
     
     admin_text = (
-        f"🚨 **New ChatGPT Plus Request**\n"
-        f"From User: {user_name} (ID: `{user_id}`)\n"
+        f"🚨 <b>New ChatGPT Plus Request</b>\n"
+        f"From User: {user_name} (ID: <code>{user_id}</code>)\n"
         f"Payment Link: {payment_link}"
     )
-    bot.send_message(ADMIN_ID, admin_text, reply_markup=markup, parse_mode="Markdown")
+    try:
+        bot.send_message(ADMIN_ID, admin_text, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        print(f"Failed to send to admin: {e}")
+        bot.send_message(message.chat.id, "❌ An error occurred while sending to admin. We refunded your account.")
+        db.add_balance(user_id, chatgpt_price)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('chatgpt_'))
 def handle_chatgpt_callback(call):
@@ -256,8 +261,12 @@ def process_deposit_screenshot(message):
         InlineKeyboardButton("❌ Reject", callback_data=f"depadmin_reject_{user_id}")
     )
     
-    caption = f"🚨 **New Deposit Request**\nFrom User: {user_name} (ID: `{user_id}`)"
-    bot.send_photo(ADMIN_ID, photo_file_id, caption=caption, reply_markup=markup, parse_mode="Markdown")
+    caption = f"🚨 <b>New Deposit Request</b>\nFrom User: {user_name} (ID: <code>{user_id}</code>)"
+    try:
+        bot.send_photo(ADMIN_ID, photo_file_id, caption=caption, reply_markup=markup, parse_mode="HTML")
+    except Exception as e:
+        print(f"Failed to send deposit to admin: {e}")
+        bot.send_message(message.chat.id, "❌ An error occurred. Please try again.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('depadmin_'))
 def handle_deposit_admin_callback(call):
