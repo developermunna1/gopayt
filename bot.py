@@ -19,7 +19,8 @@ def get_main_menu():
         KeyboardButton('💰 Balance'),
         KeyboardButton('🔗 Referral'),
         KeyboardButton('🛒 Get ChatGPT Plus'),
-        KeyboardButton('📥 Deposit')
+        KeyboardButton('📥 Deposit'),
+        KeyboardButton('📺 Tutorial')
     )
     return markup
 
@@ -206,6 +207,15 @@ def deposit_handler(message):
     )
     bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
 
+@bot.message_handler(func=lambda message: message.text == '📺 Tutorial')
+def tutorial_handler(message):
+    if not check_and_prompt_membership(message.chat.id, message.from_user.id): return
+    link = db.get_setting('tutorial_link')
+    if link:
+        bot.send_message(message.chat.id, f"📺 **How to use this bot**\n\nWatch the tutorial here:\n{link}", parse_mode="Markdown")
+    else:
+        bot.send_message(message.chat.id, "📺 The tutorial video has not been added yet. Please check back later!")
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deposit_user_'))
 def handle_deposit_user_callback(call):
     action = call.data.split('_')[2]
@@ -287,6 +297,7 @@ def admin_command(message):
         "/stats - View bot statistics\n"
         "/setreward <amount> - Set dollars paid per referral\n"
         "/setchatgptprice <amount> - Set ChatGPT Plus price\n"
+        "/settutorial <link> - Set tutorial video link\n"
         "/setrefcount <user_id> <count> - Set user's referral count\n"
         "/setbalance <user_id> <amount> - Set user's balance\n"
         "/addchannel @username - Add required channel\n"
@@ -342,6 +353,19 @@ def set_chatgpt_price_command(message):
         bot.send_message(message.chat.id, f"✅ ChatGPT Plus price updated to ${amount:.2f}")
     except ValueError:
         bot.send_message(message.chat.id, "❌ Invalid amount.")
+
+@bot.message_handler(commands=['settutorial'])
+def set_tutorial_command(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = message.text.split(maxsplit=1)
+    if len(args) != 2:
+        bot.send_message(message.chat.id, "Usage: /settutorial <video_link>")
+        return
+        
+    link = args[1]
+    db.set_setting('tutorial_link', link)
+    bot.send_message(message.chat.id, f"✅ Tutorial link updated successfully to:\n{link}")
 
 @bot.message_handler(commands=['setrefcount'])
 def set_ref_count_command(message):
