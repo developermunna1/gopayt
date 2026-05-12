@@ -139,14 +139,15 @@ def process_payment_link(message):
     user_id = message.from_user.id
     user_name = message.from_user.first_name
     
+    chatgpt_price = float(db.get_setting('chatgpt_price') or 1.0)
     user = db.get_user(user_id)
-    if not user or user['balance'] < 1.0:
-        bot.send_message(message.chat.id, "❌ Insufficient balance! You need at least $1.00 to request ChatGPT Plus.")
+    if not user or user['balance'] < chatgpt_price:
+        bot.send_message(message.chat.id, f"❌ Insufficient balance! You need at least ${chatgpt_price:.2f} to request ChatGPT Plus.")
         return
         
-    db.add_balance(user_id, -1.0)
+    db.add_balance(user_id, -chatgpt_price)
     
-    bot.send_message(message.chat.id, "⏳ Your request is being processed. $1.00 has been deducted from your balance. Please wait...")
+    bot.send_message(message.chat.id, f"⏳ Your request is being processed. ${chatgpt_price:.2f} has been deducted from your balance. Please wait...")
     
     markup = InlineKeyboardMarkup()
     markup.row(
@@ -179,10 +180,11 @@ def handle_chatgpt_callback(call):
             print(f"Failed to notify user: {e}")
             
     elif action == "cancel":
-        db.add_balance(user_id, 1.0)
+        chatgpt_price = float(db.get_setting('chatgpt_price') or 1.0)
+        db.add_balance(user_id, chatgpt_price)
         bot.edit_message_text(f"{call.message.text}\n\n**Status:** ❌ Cancelled", chat_id=call.message.chat.id, message_id=call.message.message_id)
         try:
-            bot.send_message(user_id, "❌ Sorry, your ChatGPT Plus order has been cancelled. $1.00 has been refunded to your balance.")
+            bot.send_message(user_id, f"❌ Sorry, your ChatGPT Plus order has been cancelled. ${chatgpt_price:.2f} has been refunded to your balance.")
         except Exception as e:
             print(f"Failed to notify user: {e}")
             
@@ -284,6 +286,7 @@ def admin_command(message):
         "🛠 **Admin Panel**\n"
         "/stats - View bot statistics\n"
         "/setreward <amount> - Set dollars paid per referral\n"
+        "/setchatgptprice <amount> - Set ChatGPT Plus price\n"
         "/setrefcount <user_id> <count> - Set user's referral count\n"
         "/setbalance <user_id> <amount> - Set user's balance\n"
         "/addchannel @username - Add required channel\n"
@@ -321,6 +324,22 @@ def set_reward_command(message):
         amount = float(args[1])
         db.set_setting('referral_reward', str(amount))
         bot.send_message(message.chat.id, f"✅ Referral reward updated to ${amount}")
+    except ValueError:
+        bot.send_message(message.chat.id, "❌ Invalid amount.")
+
+@bot.message_handler(commands=['setchatgptprice'])
+def set_chatgpt_price_command(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    try:
+        args = message.text.split()
+        if len(args) != 2:
+            bot.send_message(message.chat.id, "Usage: /setchatgptprice <amount>")
+            return
+        
+        amount = float(args[1])
+        db.set_setting('chatgpt_price', str(amount))
+        bot.send_message(message.chat.id, f"✅ ChatGPT Plus price updated to ${amount:.2f}")
     except ValueError:
         bot.send_message(message.chat.id, "❌ Invalid amount.")
 
