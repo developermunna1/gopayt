@@ -2,6 +2,9 @@ import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from database import Database
 import os
+import time
+import threading
+from flask import Flask
 
 TOKEN = '8700846869:AAG0z7VXoImnG4aCF0yH6IVfhDbXqY0pzzE'
 ADMIN_ID = 8766583877
@@ -402,9 +405,21 @@ def list_channels_command(message):
     else:
         bot.send_message(message.chat.id, "No required channels currently set.")
 
-import time
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
+    print("Starting Web Server...")
+    # Run Flask in a separate thread so it doesn't block the bot polling
+    threading.Thread(target=run_web, daemon=True).start()
+    
     print("Bot is running...")
     while True:
         try:
