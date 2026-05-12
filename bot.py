@@ -180,6 +180,17 @@ def handle_chatgpt_callback(call):
         except Exception as e:
             print(f"Failed to notify user: {e}")
             
+        group_id = db.get_setting('success_group_id')
+        if group_id:
+            user = db.get_user(user_id)
+            user_name = user['first_name'] if user else "A user"
+            mention = f"[{user_name}](tg://user?id={user_id})"
+            success_text = f"🎉 **New Purchase!**\n{mention} has successfully purchased a ChatGPT Plus account!"
+            try:
+                bot.send_message(group_id, success_text, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Failed to send to success group: {e}")
+            
     elif action == "cancel":
         chatgpt_price = float(db.get_setting('chatgpt_price') or 1.0)
         db.add_balance(user_id, chatgpt_price)
@@ -298,6 +309,7 @@ def admin_command(message):
         "/setreward <amount> - Set dollars paid per referral\n"
         "/setchatgptprice <amount> - Set ChatGPT Plus price\n"
         "/settutorial <link> - Set tutorial video link\n"
+        "/setgroup - Run this inside a group to set it as the success message group\n"
         "/setrefcount <user_id> <count> - Set user's referral count\n"
         "/setbalance <user_id> <amount> - Set user's balance\n"
         "/addchannel @username - Add required channel\n"
@@ -366,6 +378,13 @@ def set_tutorial_command(message):
     link = args[1]
     db.set_setting('tutorial_link', link)
     bot.send_message(message.chat.id, f"✅ Tutorial link updated successfully to:\n{link}")
+
+@bot.message_handler(commands=['setgroup'])
+def set_group_command(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    db.set_setting('success_group_id', str(message.chat.id))
+    bot.send_message(message.chat.id, f"✅ Success messages for ChatGPT Plus purchases will now be sent to this group/chat.")
 
 @bot.message_handler(commands=['setrefcount'])
 def set_ref_count_command(message):
